@@ -1,0 +1,90 @@
+blueprint:
+  name: Temperatuurgeschakeld Relais
+  description: Houd temperatuur binnen bepaalde bandbreedte
+  domain: automation
+  input:
+    relay:
+      name: Schakelaar
+      selector:
+        entity:
+          domain: switch
+    temp_sensor_air:
+      name: Temperatuursensor Lucht
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    temp_min_air:
+      name: Minimale Luchttemperatuur
+      description: "Deze automatisering is alleen actief als de lucht kouder is dan dit "
+      selector:
+        number:
+          min: -10
+          max: 20
+          unit_of_measurement: "°C"
+          mode: slider
+    temp_sensor_probe:
+      name: Temperatuurvoeler
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    temp_min_probe:
+      name: Minimale Temperatuur Voeler
+      description: "Als de temperatuur onder deze waarde zakt, wordt de schakelaar ingeschakeld"
+      selector:
+        number:
+          min: -10
+          max: 30
+          unit_of_measurement: "°C"
+          mode: slider
+    temp_max_probe:
+      name: Maximale Temperatuur Voeler
+      description: "Als de temperatuur boven deze waarde komt, wordt de schakelaar uitgeschakeld"
+      selector:
+        number:
+          min: -10
+          max: 30
+          unit_of_measurement: "°C"
+          mode: slider
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input "temp_sensor_air"
+    above: !input temp_min_air
+  - platform: numeric_state
+    entity_id: !input "temp_sensor_probe"
+    above: !input temp_max_probe
+  - platform: numeric_state
+    entity_id: !input "temp_sensor_probe"
+    below: !input temp_min_probe
+
+action:
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input temp_sensor_air
+            above: !input "temp_min_air"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input relay
+
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input temp_sensor_probe
+            below: !input "temp_min_probe"
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input relay
+
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input temp_sensor_probe
+            above: !input "temp_max_probe"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input relay
+    default: []
